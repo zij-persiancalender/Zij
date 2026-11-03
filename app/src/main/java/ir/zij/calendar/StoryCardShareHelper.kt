@@ -66,8 +66,7 @@ object StoryCardShareHelper {
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "image/png"
                 putExtra(Intent.EXTRA_STREAM, contentUri)
-                putExtra(Intent.EXTRA_TEXT, "${event.title} — ${day.toPersianDigits()} $monthName $impYear شاهنشاهی
-Zij | زیج")
+                putExtra(Intent.EXTRA_TEXT, "${event.title} — ${day.toPersianDigits()} $monthName $impYear شاهنشاهی\nZij | زیج")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             context.startActivity(Intent.createChooser(shareIntent, "هم‌رسانی کارت استوری زیج"))
