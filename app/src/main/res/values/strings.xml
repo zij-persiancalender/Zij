@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">زیج</string>
-    <string name="widget_dark_label">زیج — گاه‌شمار تیره (۴×۲)</string>
-    <string name="widget_light_label">زیج — گاه‌شمار روشن (۴×۲)</string>
+    <string name="app_name">Zij</string>
+    <string name="widget_dark_label">Zij — گاه‌شمار تیره (۴×۲)</string>
+    <string name="widget_light_label">Zij — گاه‌شمار روشن (۴×۲)</string>
     <string name="widget_dark_desc">نمایش ساعت، روز، تاریخ ۲۵۸۵ شاهنشاهی و جشن روز با زمینه لاجوردی تیره</string>
     <string name="widget_light_desc">نمایش ساعت، روز، تاریخ ۲۵۸۵ شاهنشاهی و جشن روز با زمینه روشن</string>
 </resources>

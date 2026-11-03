@@ -31,9 +31,6 @@ import ir.zij.calendar.PersianDateEngine.toAsciiDigits
 import ir.zij.calendar.PersianDateEngine.toPersianDigits
 import java.util.UUID
 
-/**
- * پنجره تمام‌صفحه، فوق‌روان و بدون پرش کیبورد برای ثبت/ویرایش زادروز و رخداد شخصی
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SmoothAddOrEditRecordDialog(
@@ -82,7 +79,6 @@ fun SmoothAddOrEditRecordDialog(
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp)
                 ) {
-                    // نوار بالای پنجره
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -101,7 +97,6 @@ fun SmoothAddOrEditRecordDialog(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // انتخاب نوع با دو دکمه لمسی بزرگ
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -136,7 +131,6 @@ fun SmoothAddOrEditRecordDialog(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // کادر نام یا عنوان با کنتراست کامل در شب و روز
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -154,7 +148,7 @@ fun SmoothAddOrEditRecordDialog(
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             label = {
-                                Text(if (isBirthday) "نام فرد (برای نمونه: سینا یا پریا)" else "عنوان رخداد یا یادداشت")
+                                Text(if (isBirthday) "نام فرد" else "عنوان رخداد یا یادداشت")
                             }
                         )
                         if (titleError) {
@@ -193,7 +187,6 @@ fun SmoothAddOrEditRecordDialog(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // انتخاب لمسی ماه و روز بدون نیاز به کیبورد!
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -290,7 +283,6 @@ fun SmoothAddOrEditRecordDialog(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // کلیدهای زمان‌بندی یادآور
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -378,9 +370,6 @@ fun SmoothAddOrEditRecordDialog(
     }
 }
 
-/**
- * پنجره پرش سریع به هر ماه و سال با لمس عنوان بالای تقویم
- */
 @Composable
 fun QuickMonthYearJumpDialog(
     currentJalaliYear: Int,
@@ -503,9 +492,6 @@ fun QuickMonthYearJumpDialog(
     }
 }
 
-/**
- * پنجره جستجوی آنی جشن‌ها، شخصیت‌ها و زادروزهای شخصی
- */
 @Composable
 fun InstantSearchDialog(
     eventsMap: Map<Pair<Int, Int>, ZijEvent>,

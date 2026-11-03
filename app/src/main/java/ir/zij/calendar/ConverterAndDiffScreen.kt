@@ -46,7 +46,7 @@ fun ConverterAndDiffScreen(
     onJumpToCalendarDate: (jalaliYear: Int, month: Int, day: Int) -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
-    var modeTab by remember { mutableIntStateOf(0) } // 0: برگردان تاریخ ، 1: فاصله دو تاریخ و سن دقیق
+    var modeTab by remember { mutableIntStateOf(0) }
 
     Column(
         modifier = Modifier
@@ -55,7 +55,6 @@ fun ConverterAndDiffScreen(
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .imePadding()
     ) {
-        // کلید جابه‌جایی بین برگردان تاریخ و محاسبه سن/فاصله
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -132,7 +131,6 @@ private fun DateConverterSection(
     var selectedMonth by remember { mutableIntStateOf(today.month) }
     var selectedDay by remember { mutableIntStateOf(today.day) }
 
-    // همگام‌سازی هوشمند سال هنگام تغییر نوع تقویم مبدا
     fun switchSystem(newSystem: CalendarSystemType) {
         if (newSystem == sourceSystem) return
         val currentGreg = resolveToGregorian(sourceSystem, yearInput, selectedMonth, selectedDay, todayGreg)
@@ -184,7 +182,6 @@ private fun DateConverterSection(
     val matchedEvent = eventsMap[resolvedPersian.month to resolvedPersian.day]
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        // کارت انتخاب تاریخ مبدا
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -219,7 +216,6 @@ private fun DateConverterSection(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // انتخاب سال با دکمه‌های + و - و ورود مستقیم عدد
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -345,7 +341,6 @@ private fun DateConverterSection(
             }
         }
 
-        // کارت خروجی مجزای هر سه تاریخ
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -518,7 +513,6 @@ private fun ExactAgeAndDiffSection(
             }
         )
 
-        // کارت نتیجه سن دقیق و فاصله زمانی
         Column(
             modifier = Modifier
                 .fillMaxWidth()

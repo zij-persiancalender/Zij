@@ -25,6 +25,18 @@
             </intent-filter>
         </activity>
 
+        <!-- کاشی تنظیمات سریع اندروید (کنار وای‌فای، نور صفحه و حالت پرواز) -->
+        <service
+            android:name=".ZijQuickTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_zij_tile_default"
+            android:label="Zij"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -44,6 +56,7 @@
                 <action android:name="android.intent.action.DATE_CHANGED" />
                 <action android:name="android.intent.action.TIME_SET" />
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
                 <action android:name="ir.zij.calendar.ACTION_MIDNIGHT_REFRESH" />
                 <action android:name="ir.zij.calendar.ACTION_DAILY_REMINDER" />
             </intent-filter>

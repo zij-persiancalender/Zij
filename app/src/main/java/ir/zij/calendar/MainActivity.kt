@@ -32,6 +32,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -67,6 +68,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import ir.zij.calendar.PersianDateEngine.toPersianDigits
 import kotlinx.coroutines.launch
@@ -112,19 +114,22 @@ private val ZijLightColorScheme = lightColorScheme(
     outline = Color(0xFFB5AC99)
 )
 
+private const val TELEGRAM_URL = "https://t.me/zij_Calendar"
 private const val DONOFA_URL = "https://donofa.com/zij"
 
 enum class ZijSection(val title: String, val subtitle: String) {
     CALENDAR("گاه‌شمار ملی", "جشن‌ها، مناسبت‌ها و روزشمار سال"),
     CONVERTER("برگردان و فاصله تاریخ", "شاهنشاهی، خورشیدی، میلادی و سن دقیق"),
     BIRTHDAYS("زادروزها و یادآورها", "فهرست زادروزها و رخدادهای شخصی"),
-    SETTINGS("ساماندهی و همیاری", "پیکربندی اعلان، ابزارک و پشتیبانی")
+    SETTINGS("ساماندهی", "کاشی عدد روز، زمان یادآور و نمای برنامه"),
+    ABOUT("درباره ما", "معرفی زیج، کانال تلگرام و درگاه همیاری")
 }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        StatusBarHelper.updateStatusBarDayNumber(this)
+        // حذف خودکار اعلان قدیمی نسخه‌های پیشین و همگام‌سازی کاشی تنظیمات سریع
+        ZijQuickTileService.syncQuickTileAndClearLegacyNotification(this)
         ZijSchedulerAndNotifications.scheduleAllAlarms(this)
         ZijWidgetUpdater.updateAllWidgets(this)
 
@@ -132,7 +137,6 @@ class MainActivity : ComponentActivity() {
             val rootView = LocalView.current
             var isDarkMode by remember { mutableStateOf(ZijPreferences.isDarkMode(this)) }
 
-            // وضعیت انیمیشن موج دایره‌ای هنگام تغییر حالت شب و روز
             var themeSnapshot by remember { mutableStateOf<ImageBitmap?>(null) }
             var revealCenter by remember { mutableStateOf(Offset.Zero) }
             val revealAnim = remember { Animatable(1f) }
@@ -174,7 +178,6 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    // لایه انیمیشن موج دایره‌ای از محل دقیق دکمه خورشید/ماه
                     val activeSnap = themeSnapshot
                     if (activeSnap != null && revealAnim.value < 1f) {
                         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -250,13 +253,28 @@ fun ZijMainShell(
     var showAddRecordDialog by remember { mutableStateOf(false) }
     var showQuickJumpDialog by remember { mutableStateOf(false) }
     var showSearchDialog by remember { mutableStateOf(false) }
+    var isBuildingStoryCard by remember { mutableStateOf(false) }
 
     var editingRecord by remember { mutableStateOf<PersonalRecord?>(null) }
     var prefillMonth by remember { mutableIntStateOf(today.month) }
     var prefillDay by remember { mutableIntStateOf(today.day) }
     var themeBtnCenter by remember { mutableStateOf(Offset(200f, 120f)) }
 
-    // بازگشت نرم به گاه‌شمار اصلی با دکمه Back گوشی
+    fun launchStoryCardShare(ev: ZijEvent, jy: Int, m: Int, d: Int) {
+        if (isBuildingStoryCard) return
+        scope.launch {
+            isBuildingStoryCard = true
+            StoryCardShareHelper.shareOccasionStoryCard(
+                context = context,
+                jalaliYear = jy,
+                month = m,
+                day = d,
+                event = ev
+            )
+            isBuildingStoryCard = false
+        }
+    }
+
     BackHandler(enabled = drawerState.isOpen || currentSection != ZijSection.CALENDAR) {
         if (drawerState.isOpen) {
             scope.launch { drawerState.close() }
@@ -276,7 +294,6 @@ fun ZijMainShell(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
-            StatusBarHelper.updateStatusBarDayNumber(context)
             ZijSchedulerAndNotifications.scheduleAllAlarms(context)
         }
     }
@@ -302,14 +319,13 @@ fun ZijMainShell(
         drawerContent = {
             ModalDrawerSheet(
                 drawerContainerColor = cardColor,
-                modifier = Modifier.width(300.dp)
+                modifier = Modifier.width(305.dp)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 16.dp, vertical = 20.dp)
                 ) {
-                    // سربرگ نوار بازشونده
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -319,7 +335,7 @@ fun ZijMainShell(
                             .padding(16.dp)
                     ) {
                         Text(
-                            text = "گاه‌شمار ملی زیج",
+                            text = "Zij | زیج",
                             color = JoyGold,
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 19.sp
@@ -333,7 +349,7 @@ fun ZijMainShell(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(18.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     ZijSection.entries.forEach { sec ->
                         val active = currentSection == sec
@@ -342,6 +358,7 @@ fun ZijMainShell(
                             ZijSection.CONVERTER -> Icons.Default.Refresh
                             ZijSection.BIRTHDAYS -> Icons.Default.Notifications
                             ZijSection.SETTINGS -> Icons.Default.Settings
+                            ZijSection.ABOUT -> Icons.Default.Info
                         }
 
                         Row(
@@ -355,7 +372,7 @@ fun ZijMainShell(
                                     currentSection = sec
                                     scope.launch { drawerState.close() }
                                 }
-                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                .padding(horizontal = 14.dp, vertical = 11.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
@@ -382,7 +399,7 @@ fun ZijMainShell(
 
                     Spacer(modifier = Modifier.weight(1f))
                     Text(
-                        text = "نسخه ۲.۰ • زیج (Zij)",
+                        text = "نسخه ۳.۰ • Zij | زیج",
                         color = secondaryText.copy(alpha = 0.7f),
                         fontSize = 11.sp,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -416,7 +433,6 @@ fun ZijMainShell(
                     .padding(innerPadding)
                     .statusBarsPadding()
             ) {
-                // نوار بالایی یکپارچه همراه با دکمه سه نقطه بازکننده نوار جانبی، جستجو و دکمه تم دایره‌ای
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -428,7 +444,6 @@ fun ZijMainShell(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        // دکمه سه نقطه برای باز کردن نوار منو
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
@@ -449,7 +464,7 @@ fun ZijMainShell(
 
                         Column(modifier = Modifier.padding(start = 4.dp)) {
                             Text(
-                                text = "درود • زیج",
+                                text = "درود • Zij",
                                 color = TurquoiseAccent,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold
@@ -494,7 +509,6 @@ fun ZijMainShell(
                             }
                         }
 
-                        // دکمه ذره‌بین جستجوی آنی
                         Box(
                             modifier = Modifier
                                 .size(38.dp)
@@ -514,7 +528,6 @@ fun ZijMainShell(
                             )
                         }
 
-                        // دکمه خورشید/ماه با ردیابی دقیق مختصات مرکز برای انیمیشن موج دایره‌ای
                         Box(
                             modifier = Modifier
                                 .size(38.dp)
@@ -542,7 +555,6 @@ fun ZijMainShell(
                     }
                 }
 
-                // بدنه متحرک بخش‌های چهارگانه
                 AnimatedContent(
                     targetState = currentSection,
                     transitionSpec = {
@@ -589,13 +601,8 @@ fun ZijMainShell(
                             },
                             onShowExplanation = { showExplanationSheet = true },
                             onShareStory = { ev ->
-                                StoryCardShareHelper.shareOccasionStoryCard(
-                                    context = context,
-                                    jalaliYear = displayedYear,
-                                    month = displayedMonth,
-                                    day = selectedDay.coerceIn(1, PersianDateEngine.getDaysInMonth(displayedYear, displayedMonth)),
-                                    event = ev
-                                )
+                                val dSafe = selectedDay.coerceIn(1, PersianDateEngine.getDaysInMonth(displayedYear, displayedMonth))
+                                launchStoryCardShare(ev, displayedYear, displayedMonth, dSafe)
                             },
                             onAddPersonalForSelectedDay = {
                                 editingRecord = null
@@ -636,12 +643,18 @@ fun ZijMainShell(
                             }
                         )
 
-                        ZijSection.SETTINGS -> SettingsAndSupportScreen(
+                        ZijSection.SETTINGS -> SettingsCleanScreen(
                             isDark = isDark,
                             cardColor = cardColor,
                             primaryText = primaryText,
                             secondaryText = secondaryText,
                             onDarkChanged = { onToggleThemeFromOrigin(themeBtnCenter) }
+                        )
+
+                        ZijSection.ABOUT -> AboutUsFormalScreen(
+                            cardColor = cardColor,
+                            primaryText = primaryText,
+                            secondaryText = secondaryText
                         )
                     }
                 }
@@ -649,7 +662,35 @@ fun ZijMainShell(
         }
     }
 
-    // پنجره بازشونده «توضیحات» رخداد ملی
+    // پنجره کوچک در حال آماده‌سازی کارت استوری (دریافت تصویر پس‌زمینه از گیت‌هاب)
+    if (isBuildingStoryCard) {
+        Dialog(onDismissRequest = {}) {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(cardColor)
+                        .border(1.dp, JoyGold.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
+                        .padding(horizontal = 20.dp, vertical = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    CircularProgressIndicator(
+                        color = TurquoiseAccent,
+                        modifier = Modifier.size(26.dp),
+                        strokeWidth = 3.dp
+                    )
+                    Text(
+                        text = "در حال آماده‌سازی کارت استوری...",
+                        color = primaryText,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        }
+    }
+
     val safeDay = selectedDay.coerceIn(1, PersianDateEngine.getDaysInMonth(displayedYear, displayedMonth))
     val selectedEvent = eventsMap[displayedMonth to safeDay]
     if (showExplanationSheet && selectedEvent != null) {
@@ -688,13 +729,7 @@ fun ZijMainShell(
                     OutlinedButton(
                         onClick = {
                             showExplanationSheet = false
-                            StoryCardShareHelper.shareOccasionStoryCard(
-                                context = context,
-                                jalaliYear = displayedYear,
-                                month = displayedMonth,
-                                day = safeDay,
-                                event = selectedEvent
-                            )
+                            launchStoryCardShare(selectedEvent, displayedYear, displayedMonth, safeDay)
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -708,7 +743,6 @@ fun ZijMainShell(
         }
     }
 
-    // پنجره تمام‌صفحه روان برای ثبت/ویرایش زادروز و رخداد شخصی
     if (showAddRecordDialog) {
         SmoothAddOrEditRecordDialog(
             initialRecord = editingRecord,
@@ -727,7 +761,6 @@ fun ZijMainShell(
         )
     }
 
-    // پرش سریع ماه و سال
     if (showQuickJumpDialog) {
         QuickMonthYearJumpDialog(
             currentJalaliYear = displayedYear,
@@ -745,7 +778,6 @@ fun ZijMainShell(
         )
     }
 
-    // جستجوی آنی
     if (showSearchDialog) {
         InstantSearchDialog(
             eventsMap = eventsMap,
@@ -797,7 +829,6 @@ fun CalendarMainScreen(
         PersianDateEngine.computeYearStats(today, displayedYear, displayedMonth, safeSelectedDay)
     }
 
-    // انیمیشن نرم اعداد روزشمار و پیشرفت سال
     val animatedAbsDiff by animateIntAsState(
         targetValue = abs(yearStats.diffFromToday),
         animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing),
@@ -827,9 +858,6 @@ fun CalendarMainScreen(
             .navigationBarsPadding(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // ==========================================
-        // کارت گاهبرگ ماهانه (همراه با ورق زدن لمسی چپ و راست + دکمه کوچک راهنما در سمت چپ)
-        // ==========================================
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -845,10 +873,8 @@ fun CalendarMainScreen(
                         },
                         onDragEnd = {
                             if (dragSumX > 85f) {
-                                // کشیدن به راست -> ماه پسین
                                 onStepMonth(1)
                             } else if (dragSumX < -85f) {
-                                // کشیدن به چپ -> ماه پیشین
                                 onStepMonth(-1)
                             }
                         }
@@ -856,7 +882,6 @@ fun CalendarMainScreen(
                 }
                 .padding(14.dp)
         ) {
-            // نوار عنوان ماه با قابلیت پرش سریع با لمس نام ماه
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -907,7 +932,6 @@ fun CalendarMainScreen(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            // سرستون روزهای هفته
             Row(modifier = Modifier.fillMaxWidth()) {
                 PersianDateEngine.weekDaysShort.forEachIndexed { idx, label ->
                     Text(
@@ -923,7 +947,6 @@ fun CalendarMainScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // انیمیشن ورق خوردن شبکه روزهای ماه
             AnimatedContent(
                 targetState = Pair(displayedYear, displayedMonth),
                 transitionSpec = {
@@ -984,7 +1007,6 @@ fun CalendarMainScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // دکمه کوچک و ظریف «راهنما» در سمت چپ پایین تقویم (بازشونده با انیمیشن)
             Box(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier
@@ -1036,9 +1058,7 @@ fun CalendarMainScreen(
             }
         }
 
-        // ==========================================
-        // پنجره نخست (مجزا): رخدادهای روز، دکمه توضیحات، کارت استوری و یادآور شخصی
-        // ==========================================
+        // پنجره نخست (مجزا): رخدادهای روز
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1144,9 +1164,7 @@ fun CalendarMainScreen(
             }
         }
 
-        // ==========================================
-        // پنجره دوم (کاملاً مجزا): روزشمار متحرک سال و برابرهای سه‌گانه تاریخ
-        // ==========================================
+        // پنجره دوم (مجزا): روزشمار سال و برابرهای تاریخ
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1156,7 +1174,6 @@ fun CalendarMainScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // نشانگر متحرک فاصله روز انتخاب‌شده تا امروز
             val diffStatusText = when {
                 yearStats.diffFromToday == 0 -> "تاریخ برگزیده: امروز"
                 yearStats.diffFromToday > 0 -> "${animatedAbsDiff.toPersianDigits()} روز مانده تا این تاریخ"
@@ -1185,7 +1202,6 @@ fun CalendarMainScreen(
                 )
             }
 
-            // شمارنده متحرک روزهای سپری‌شده و مانده تا سال نو
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -1235,7 +1251,6 @@ fun CalendarMainScreen(
                 }
             }
 
-            // نوار پیشرفت تصویری سال
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1254,7 +1269,6 @@ fun CalendarMainScreen(
 
             HorizontalDivider(color = secondaryText.copy(alpha = 0.18f))
 
-            // نمایش مجزای معادل‌های سه‌گانه روز انتخاب‌شده
             Text(
                 text = "برابرهای این روز به تفکیک:",
                 color = secondaryText,
@@ -1574,8 +1588,11 @@ fun BirthdaysAndRemindersScreen(
     }
 }
 
+/**
+ * صفحه «ساماندهی» خلوت و ویژه تنظیمات فنی (کارت همیاری به بخش «درباره ما» منتقل شد)
+ */
 @Composable
-fun SettingsAndSupportScreen(
+fun SettingsCleanScreen(
     isDark: Boolean,
     cardColor: Color,
     primaryText: Color,
@@ -1583,7 +1600,6 @@ fun SettingsAndSupportScreen(
     onDarkChanged: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
-    var statusBarEnabled by remember { mutableStateOf(ZijPreferences.isStatusBarEnabled(context)) }
     var festivalNotifyEnabled by remember { mutableStateOf(ZijPreferences.isFestivalNotifyEnabled(context)) }
     var reminderHour by remember { mutableIntStateOf(ZijPreferences.getReminderHour(context)) }
     var reminderMinute by remember { mutableIntStateOf(ZijPreferences.getReminderMinute(context)) }
@@ -1593,8 +1609,43 @@ fun SettingsAndSupportScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 10.dp)
-            .navigationBarsPadding()
+            .navigationBarsPadding(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        // کارت ویژه کاشی تنظیمات سریع (کنار نور صفحه و حالت پرواز)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(cardColor)
+                .border(1.dp, TurquoiseAccent.copy(alpha = 0.45f), RoundedCornerShape(20.dp))
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "کاشی عدد روز در نوار تنظیمات سریع",
+                color = TurquoiseAccent,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "نمایش عدد روز ماه در بخش ابزارهای بالای گوشی (کنار تنظیم نور صفحه، وای‌فای و حالت پرواز). ارقام این کاشی به‌صورت خودکار با زبان گوشی شما (فارسی یا انگلیسی) سازگار می‌شود.",
+                color = secondaryText,
+                fontSize = 13.sp,
+                lineHeight = 21.sp
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = { ZijQuickTileService.promptAddQuickTile(context) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = TurquoiseAccent, contentColor = Color.White),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("افزودن کاشی عدد روز به نوار بالای گوشی", fontWeight = FontWeight.Bold)
+            }
+        }
+
+        // کارت ساماندهی نما و اعلان‌ها
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1612,29 +1663,6 @@ fun SettingsAndSupportScreen(
                     Text("تغییر نرم میان حالت شب و نمای روشن استخوانی", color = secondaryText, fontSize = 12.sp)
                 }
                 Switch(checked = isDark, onCheckedChange = onDarkChanged)
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = secondaryText.copy(alpha = 0.16f))
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("نمایش عدد روز در نوار بالای گوشی", color = primaryText, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    Text("نمایش همیشگی عدد روز ماه در بخش اعلان بالای صفحه", color = secondaryText, fontSize = 12.sp)
-                }
-                Switch(
-                    checked = statusBarEnabled,
-                    onCheckedChange = { enabled ->
-                        statusBarEnabled = enabled
-                        ZijPreferences.setStatusBarEnabled(context, enabled)
-                        StatusBarHelper.updateStatusBarDayNumber(context)
-                    }
-                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -1706,8 +1734,7 @@ fun SettingsAndSupportScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
-
+        // کارت راهنمای ابزارک ۴×۲ صفحه اصلی
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1718,31 +1745,81 @@ fun SettingsAndSupportScreen(
             Text("ابزارک صفحه اصلی (تیره و روشن ۴×۲)", color = primaryText, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "انگشت خود را روی فضای خالی صفحه اصلی گوشی نگه دارید، گزینه «ابزارک‌ها» (Widgets) را بزنید و یکی از دو طرح تیره یا روشن زیج را برگزینید.",
+                text = "انگشت خود را روی فضای خالی صفحه اصلی گوشی نگه دارید، گزینه «ابزارک‌ها» (Widgets) را بزنید و یکی از دو طرح تیره یا روشن Zij را برگزینید.",
                 color = secondaryText,
                 fontSize = 13.sp,
                 lineHeight = 21.sp
             )
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
 
-        // کارت همیاری در دونفا
+/**
+ * صفحه رسمی «درباره ما» شامل معرفی زیج، کانال تلگرام رسمی و شیوه همیاری بی‌آگهی
+ */
+@Composable
+fun AboutUsFormalScreen(
+    cardColor: Color,
+    primaryText: Color,
+    secondaryText: Color
+) {
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .navigationBarsPadding(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        // کارت معرفی رسمی گاه‌شمار زیج
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
                 .background(cardColor)
-                .border(1.2.dp, JoyGold.copy(alpha = 0.55f), RoundedCornerShape(20.dp))
+                .border(1.dp, JoyGold.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
+                .padding(18.dp)
+        ) {
+            Text(
+                text = "Zij | زیج",
+                color = JoyGold,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 22.sp
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "گاه‌شمار ملی «زیج» سامانه‌ای مستقل برای پاسداشت گاه‌شماری ایرانی، بازنمایی دقیق جشن‌های باستانی و بزرگداشت رخدادهای تاریخی ایران‌زمین است. واژه «زیج» برگرفته از دانش ستاره‌شناسی و گاه‌نگاری کهن ایرانی است.",
+                color = primaryText.copy(alpha = 0.92f),
+                fontSize = 14.sp,
+                lineHeight = 24.sp
+            )
+        }
+
+        // کارت راه ارتباطی رسمی (تلگرام)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(cardColor)
+                .border(1.dp, TurquoiseAccent.copy(alpha = 0.45f), RoundedCornerShape(20.dp))
                 .padding(18.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Default.Favorite, contentDescription = null, tint = JoyGold)
-                Text("همیاری و پشتیبانی از زیج", color = JoyGold, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, tint = TurquoiseAccent)
+                Text(
+                    text = "راه ارتباطی رسمی: تلگرام",
+                    color = TurquoiseAccent,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp
+                )
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "گاه‌شمار ملی «زیج» به صورت رایگان و مستقل برای پاسداشت فرهنگ و جشن‌های ایران‌زمین ساخته شده است. از راه پیوند زیر می‌توانید با ما همیاری کنید:",
+                text = "جهت دریافت تازه‌ترین نسخه‌های برنامه، اطلاع از به‌روزرسانی‌ها و در میان گذاشتن دیدگاه‌ها و پیشنهادهای خود، به کانال رسمی زیج در تلگرام بپیوندید:",
                 color = primaryText.copy(alpha = 0.9f),
                 fontSize = 13.sp,
                 lineHeight = 22.sp
@@ -1755,8 +1832,66 @@ fun SettingsAndSupportScreen(
                 Button(
                     onClick = {
                         try {
-                            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(DONOFA_URL))
-                            context.startActivity(browserIntent)
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(TELEGRAM_URL)))
+                        } catch (_: Exception) {
+                            Toast.makeText(context, "برنامه تلگرام یا مرورگر یافت نشد", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.weight(1.4f),
+                    colors = ButtonDefaults.buttonColors(containerColor = TurquoiseAccent, contentColor = Color.White),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("ورود به کانال تلگرام", fontWeight = FontWeight.Bold)
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(ClipData.newPlainText("کانال تلگرام زیج", TELEGRAM_URL))
+                        Toast.makeText(context, "نشانی تلگرام رونوشت شد", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("رونوشت نشانی", color = primaryText, fontSize = 12.sp)
+                }
+            }
+        }
+
+        // کارت شیوه درآمد و پشتیبانی رسمی (بدون تبلیغات - درگاه دونفا)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(cardColor)
+                .border(1.2.dp, JoyGold.copy(alpha = 0.55f), RoundedCornerShape(20.dp))
+                .padding(18.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Default.Favorite, contentDescription = null, tint = JoyGold)
+                Text(
+                    text = "شیوه پشتیبانی و پایداری برنامه",
+                    color = JoyGold,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "این برنامه عاری از هرگونه آگهی بازرگانی است و به‌صورت کاملاً مستقل و رایگان در اختیار هم‌میهنان قرار گرفته است. همراهان گرامی که خواهان پشتیبانی از پایداری، نگهداری و گسترش گاه‌شمار «زیج» هستند، می‌توانند از راه درگاه همیاری زیر اقدام نمایند:",
+                color = primaryText.copy(alpha = 0.92f),
+                fontSize = 13.sp,
+                lineHeight = 23.sp
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Button(
+                    onClick = {
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(DONOFA_URL)))
                         } catch (_: Exception) {
                             Toast.makeText(context, "مرورگر یافت نشد", Toast.LENGTH_SHORT).show()
                         }
@@ -1765,7 +1900,7 @@ fun SettingsAndSupportScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = JoyGold, contentColor = Color(0xFF141824)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("همیاری در دونفا", fontWeight = FontWeight.ExtraBold)
+                    Text("درگاه همیاری (دونفا)", fontWeight = FontWeight.ExtraBold)
                 }
 
                 OutlinedButton(
@@ -1782,7 +1917,7 @@ fun SettingsAndSupportScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 

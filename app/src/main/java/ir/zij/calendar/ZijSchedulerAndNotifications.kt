@@ -146,7 +146,7 @@ object ZijSchedulerAndNotifications {
                 sendAlertNotification(
                     context,
                     notifIndex++,
-                    "گاه‌شمار ملی زیج • ${today.day.toPersianDigits()} ${PersianDateEngine.monthNames[today.month - 1]}",
+                    "Zij | زیج • ${today.day.toPersianDigits()} ${PersianDateEngine.monthNames[today.month - 1]}",
                     "فرخنده باد: ${todayEvent.title}"
                 )
             }
@@ -191,7 +191,7 @@ object ZijSchedulerAndNotifications {
         )
 
         val builder = NotificationCompat.Builder(context, REMINDER_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_zij_tile_default)
             .setContentTitle(title)
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))

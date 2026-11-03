@@ -6,7 +6,7 @@ import android.content.Intent
 
 class DateChangeReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
-        StatusBarHelper.updateStatusBarDayNumber(context)
+        ZijQuickTileService.syncQuickTileAndClearLegacyNotification(context)
         ZijWidgetUpdater.updateAllWidgets(context)
         ZijSchedulerAndNotifications.scheduleAllAlarms(context)
 

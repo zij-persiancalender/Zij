@@ -33,10 +33,10 @@ data class PersianDate(
 }
 
 data class YearStats(
-    val diffFromToday: Int,     // مثبت: مانده، منفی: گذشته، صفر: امروز
-    val daysPassedInYear: Int,  // روز سپری‌شده از آغاز سال
-    val daysLeftInYear: Int,    // روز مانده تا سال نو
-    val totalDaysInYear: Int    // ۳۶۵ یا ۳۶۶
+    val diffFromToday: Int,
+    val daysPassedInYear: Int,
+    val daysLeftInYear: Int,
+    val totalDaysInYear: Int
 )
 
 data class ExactDateSpan(
@@ -62,7 +62,6 @@ object PersianDateEngine {
     val weekDaysShort = listOf("ش", "ی", "د", "س", "چ", "پ", "ج")
     val weekDaysFull = listOf("شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه")
 
-    private const val REMOTE_EVENTS_URL = "https://raw.githubusercontent.com/YOUR_USERNAME/Zij/main/app/src/main/assets/zij_events.json"
     private const val CACHE_PREFS = "zij_events_cache"
     private const val KEY_JSON = "cached_events_json"
 
@@ -92,6 +91,28 @@ object PersianDateEngine {
             }
         }
         return sb.toString()
+    }
+
+    /**
+     * سازگار با زبان گوشی برای نمایش عدد روز در کاشی تنظیمات سریع اندروید:
+     * اگر زبان سیستم گوشی فارسی باشد ارقام فارسی (۱۵) و اگر انگلیسی باشد ارقام انگلیسی (15) برمی‌گرداند.
+     */
+    fun formatDayForDeviceLocale(day: Int): String {
+        val lang = Locale.getDefault().language.lowercase(Locale.ROOT)
+        return when (lang) {
+            "fa", "ckb", "ps", "ur" -> day.toPersianDigits()
+            else -> String.format(Locale.getDefault(), "%d", day)
+        }
+    }
+
+    fun getGithubRawBaseUrl(context: Context): String {
+        val custom = ZijPreferences.getCustomRepoBaseUrl(context).trim().trimEnd('/')
+        if (custom.startsWith("http")) return custom
+        return try {
+            context.assets.open("github_raw_base.txt").bufferedReader().use { it.readText().trim().trimEnd('/') }
+        } catch (_: Exception) {
+            "https://raw.githubusercontent.com/YOUR_USERNAME/Zij/main"
+        }
     }
 
     fun today(): PersianDate {
@@ -250,8 +271,10 @@ object PersianDateEngine {
     suspend fun syncEventsOnlineIfAvailable(context: Context): Map<Pair<Int, Int>, ZijEvent>? {
         return withContext(Dispatchers.IO) {
             try {
-                if (REMOTE_EVENTS_URL.contains("YOUR_USERNAME")) return@withContext null
-                val conn = (URL(REMOTE_EVENTS_URL).openConnection() as HttpURLConnection).apply {
+                val rawBase = getGithubRawBaseUrl(context)
+                if (rawBase.contains("YOUR_USERNAME")) return@withContext null
+                val remoteUrl = "$rawBase/app/src/main/assets/zij_events.json"
+                val conn = (URL(remoteUrl).openConnection() as HttpURLConnection).apply {
                     connectTimeout = 5000
                     readTimeout = 5000
                     requestMethod = "GET"
