@@ -38,7 +38,6 @@ object ZijPreferences {
             .edit().putBoolean(KEY_FESTIVAL_NOTIFY, enabled).apply()
     }
 
-    // پیش‌فرض دقیقاً طبق دستور شما: ساعت ۰۰:۰۱ بامداد (نخستین دقیقه روز)
     fun getReminderHour(context: Context): Int =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getInt(KEY_REMINDER_HOUR, 0)

@@ -8,7 +8,7 @@ import java.util.UUID
 data class PersonalRecord(
     val id: String = UUID.randomUUID().toString(),
     val title: String,
-    val isBirthday: Boolean, // true = زادروز ، false = رخداد شخصی
+    val isBirthday: Boolean,
     val month: Int,
     val day: Int,
     val birthImperialYear: Int? = null,

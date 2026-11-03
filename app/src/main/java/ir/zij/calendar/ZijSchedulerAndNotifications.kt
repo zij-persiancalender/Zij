@@ -102,7 +102,6 @@ object ZijSchedulerAndNotifications {
         ensureReminderChannel(context)
         var notifIndex = 4100
 
-        // ۱. بررسی زادروزها و رخدادهای شخصی
         val records = PersonalRecordsRepository.loadAll(context)
         for (rec in records) {
             val daysLeft = PersianDateEngine.daysUntilNextAnnualDate(today, rec.month, rec.day)
@@ -140,7 +139,6 @@ object ZijSchedulerAndNotifications {
             }
         }
 
-        // ۲. بررسی جشن‌های ملی و باستانی امروز
         if (ZijPreferences.isFestivalNotifyEnabled(context)) {
             val events = PersianDateEngine.loadEventsOfflineFirst(context)
             val todayEvent = events[today.month to today.day]
@@ -204,7 +202,6 @@ object ZijSchedulerAndNotifications {
         try {
             nm.notify(id, builder.build())
         } catch (_: SecurityException) {
-            // مجوز اعلان داده نشده است
         }
     }
 }

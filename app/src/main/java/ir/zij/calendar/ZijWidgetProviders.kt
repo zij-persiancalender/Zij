@@ -39,7 +39,7 @@ object ZijWidgetUpdater {
             PersianDateEngine.getDayOfWeekIndex(today.jalaliYear, today.month, today.day)
         ]
         val persianFull = "${today.day.toPersianDigits()} ${PersianDateEngine.monthNames[today.month - 1]} ${today.imperialYear.toPersianDigits()} شاهنشاهی"
-        val gregorianFull = PersianDateEngine.formatGregorianEquivalent(today.jalaliYear, today.month, today.day)
+        val gregorianFull = "${PersianDateEngine.formatGregorianPersian(today.jalaliYear, today.month, today.day)} میلادی"
 
         val eventsMap = PersianDateEngine.loadEventsOfflineFirst(context)
         val nationalEvent = eventsMap[today.month to today.day]
@@ -57,7 +57,7 @@ object ZijWidgetUpdater {
                 if (p.isBirthday) "امروز: زادروز ${p.title}" else "امروز: ${p.title}"
             }
             nationalEvent != null -> nationalEvent.title
-            else -> "روز خوش • بدون رخداد ثبت‌شده"
+            else -> "روز خوش • گاه‌شمار ملی زیج"
         }
 
         views.setTextViewText(R.id.widget_weekday, weekDayName)

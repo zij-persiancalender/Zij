@@ -67,7 +67,6 @@ object StatusBarHelper {
         try {
             nm.notify(NOTIFICATION_ID, notification)
         } catch (_: SecurityException) {
-            // مجوز اعلان هنوز داده نشده است
         }
     }
 

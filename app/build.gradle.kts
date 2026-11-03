@@ -11,14 +11,13 @@ android {
         applicationId = "ir.zij.calendar"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "2.0.0"
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            // امضای خودکار نسخه نهایی برای نصب مستقیم و روان روی همه گوشی‌های اندرویدی
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -46,6 +45,8 @@ dependencies {
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.animation:animation")
+    implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-core")
     implementation("androidx.activity:activity-compose:1.9.0")

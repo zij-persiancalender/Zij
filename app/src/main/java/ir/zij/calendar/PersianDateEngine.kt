@@ -7,9 +7,12 @@ import org.json.JSONArray
 import java.net.HttpURLConnection
 import java.net.URL
 import java.time.LocalDate
+import java.time.Period
+import java.time.YearMonth
 import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
 import java.util.Locale
+import kotlin.math.abs
 
 enum class EventCategory { JOY, SORROW, DUAL, BLACK }
 
@@ -29,11 +32,31 @@ data class PersianDate(
     val imperialYear: Int get() = jalaliYear + 1180
 }
 
+data class YearStats(
+    val diffFromToday: Int,     // مثبت: مانده، منفی: گذشته، صفر: امروز
+    val daysPassedInYear: Int,  // روز سپری‌شده از آغاز سال
+    val daysLeftInYear: Int,    // روز مانده تا سال نو
+    val totalDaysInYear: Int    // ۳۶۵ یا ۳۶۶
+)
+
+data class ExactDateSpan(
+    val years: Int,
+    val months: Int,
+    val days: Int,
+    val totalDays: Long,
+    val isEndBeforeStart: Boolean
+)
+
 object PersianDateEngine {
 
     val monthNames = listOf(
         "فروردین", "اردیبهشت", "خرداد", "تیر", "امرداد", "شهریور",
         "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"
+    )
+
+    val gregorianMonthNamesPersian = listOf(
+        "ژانویه", "فوریه", "مارس", "آوریل", "مه", "ژوئن",
+        "ژوئیه", "اوت", "سپتامبر", "اکتبر", "نوامبر", "دسامبر"
     )
 
     val weekDaysShort = listOf("ش", "ی", "د", "س", "چ", "پ", "ج")
@@ -44,15 +67,28 @@ object PersianDateEngine {
     private const val KEY_JSON = "cached_events_json"
 
     fun Int.toPersianDigits(): String = this.toString().toPersianDigits()
+    fun Long.toPersianDigits(): String = this.toString().toPersianDigits()
 
     fun String.toPersianDigits(): String {
         val persianDigits = charArrayOf('۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹')
         val sb = StringBuilder(this.length)
         for (ch in this) {
-            if (ch in '0'..'9') {
-                sb.append(persianDigits[ch - '0'])
-            } else {
-                sb.append(ch)
+            when (ch) {
+                in '0'..'9' -> sb.append(persianDigits[ch - '0'])
+                in '٠'..'٩' -> sb.append(persianDigits[ch - '٠'])
+                else -> sb.append(ch)
+            }
+        }
+        return sb.toString()
+    }
+
+    fun String.toAsciiDigits(): String {
+        val sb = StringBuilder(this.length)
+        for (ch in this) {
+            when (ch) {
+                in '۰'..'۹' -> sb.append(('0'.code + (ch - '۰')).toChar())
+                in '٠'..'٩' -> sb.append(('0'.code + (ch - '٠')).toChar())
+                else -> sb.append(ch)
             }
         }
         return sb.toString()
@@ -75,17 +111,67 @@ object PersianDateEngine {
         }
     }
 
+    fun getDaysInGregorianMonth(gy: Int, gm: Int): Int {
+        val safeYear = gy.coerceIn(1, 9999)
+        val safeMonth = gm.coerceIn(1, 12)
+        return YearMonth.of(safeYear, safeMonth).lengthOfMonth()
+    }
+
     fun getDayOfWeekIndex(jalaliYear: Int, month: Int, day: Int): Int {
         val safeDay = day.coerceIn(1, getDaysInMonth(jalaliYear, month))
         val gDate = jalaliToGregorian(jalaliYear, month, safeDay)
         return (gDate.dayOfWeek.value + 1) % 7
     }
 
-    fun formatGregorianEquivalent(jalaliYear: Int, month: Int, day: Int): String {
+    fun formatGregorianEnglish(jalaliYear: Int, month: Int, day: Int): String {
         val safeDay = day.coerceIn(1, getDaysInMonth(jalaliYear, month))
         val gDate = jalaliToGregorian(jalaliYear, month, safeDay)
         val mName = gDate.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
         return "${gDate.dayOfMonth} $mName ${gDate.year}"
+    }
+
+    fun formatGregorianPersian(jalaliYear: Int, month: Int, day: Int): String {
+        val safeDay = day.coerceIn(1, getDaysInMonth(jalaliYear, month))
+        val gDate = jalaliToGregorian(jalaliYear, month, safeDay)
+        val mPersian = gregorianMonthNamesPersian[gDate.monthValue - 1]
+        return "${gDate.dayOfMonth.toPersianDigits()} $mPersian ${gDate.year.toPersianDigits()}"
+    }
+
+    fun computeYearStats(todayDate: PersianDate, selectedYear: Int, selectedMonth: Int, selectedDay: Int): YearStats {
+        val safeDay = selectedDay.coerceIn(1, getDaysInMonth(selectedYear, selectedMonth))
+        val todayGreg = jalaliToGregorian(todayDate.jalaliYear, todayDate.month, todayDate.day)
+        val selectedGreg = jalaliToGregorian(selectedYear, selectedMonth, safeDay)
+
+        val diffFromToday = ChronoUnit.DAYS.between(todayGreg, selectedGreg).toInt()
+        val totalDaysInYear = 336 + getDaysInMonth(selectedYear, 12)
+        val dayOfYear = if (selectedMonth <= 6) {
+            (selectedMonth - 1) * 31 + safeDay
+        } else {
+            186 + (selectedMonth - 7) * 30 + safeDay
+        }
+        val daysLeftInYear = (totalDaysInYear - dayOfYear).coerceAtLeast(0)
+
+        return YearStats(
+            diffFromToday = diffFromToday,
+            daysPassedInYear = dayOfYear,
+            daysLeftInYear = daysLeftInYear,
+            totalDaysInYear = totalDaysInYear
+        )
+    }
+
+    fun calculateExactSpan(start: LocalDate, end: LocalDate): ExactDateSpan {
+        val isReversed = end.isBefore(start)
+        val d1 = if (isReversed) end else start
+        val d2 = if (isReversed) start else end
+        val period = Period.between(d1, d2)
+        val totalDays = abs(ChronoUnit.DAYS.between(d1, d2))
+        return ExactDateSpan(
+            years = period.years,
+            months = period.months,
+            days = period.days,
+            totalDays = totalDays,
+            isEndBeforeStart = isReversed
+        )
     }
 
     fun daysUntilNextAnnualDate(from: PersianDate, targetMonth: Int, targetDay: Int): Int {
@@ -151,7 +237,7 @@ object PersianDateEngine {
             gd -= salA[gm]
             gm++
         }
-        return LocalDate.of(gy, gm, gd)
+        return LocalDate.of(gy.coerceIn(1, 9999), gm.coerceIn(1, 12), gd.coerceIn(1, 31))
     }
 
     fun loadEventsOfflineFirst(context: Context): Map<Pair<Int, Int>, ZijEvent> {

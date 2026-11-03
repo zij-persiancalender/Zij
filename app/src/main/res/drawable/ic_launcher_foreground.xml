@@ -3,49 +3,33 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-
-    <!-- سایه زیر گاهبرگ -->
     <path
         android:fillColor="#33000000"
         android:pathData="M31,30 h46 a6,6 0 0,1 6,6 v36 l-12,12 h-40 a6,6 0 0,1 -6,-6 v-42 a6,6 0 0,1 6,-6 z" />
-
-    <!-- بدنه اصلی گاهبرگ استخوانیِ روشن -->
     <path
         android:fillColor="#F7F3E8"
         android:pathData="M30,28 h48 a5,5 0 0,1 5,5 v36 l-13,13 h-40 a5,5 0 0,1 -5,-5 v-44 a5,5 0 0,1 5,-5 z" />
-
-    <!-- سربرگ فیروزه‌ای ایرانی بالای گاهبرگ -->
     <path
         android:fillColor="#00A896"
         android:pathData="M30,28 h48 a5,5 0 0,1 5,5 v9 h-58 v-9 a5,5 0 0,1 5,-5 z" />
-
-    <!-- نوار زرین زیر سربرگ -->
     <path
         android:fillColor="#D4AF37"
         android:pathData="M25,41 h58 v2 h-58 z" />
-
-    <!-- دو حلقه طلایی بالای گاهبرگ -->
     <path
         android:fillColor="#D4AF37"
         android:pathData="M39,23 h4 a2,2 0 0,1 2,2 v7 a2,2 0 0,1 -2,2 h-4 a2,2 0 0,1 -2,-2 v-7 a2,2 0 0,1 2,-2 z" />
     <path
         android:fillColor="#D4AF37"
         android:pathData="M65,23 h4 a2,2 0 0,1 2,2 v7 a2,2 0 0,1 -2,2 h-4 a2,2 0 0,1 -2,-2 v-7 a2,2 0 0,1 2,-2 z" />
-
-    <!-- پرتوهای هشت‌پر خورشید ایرانی در دل گاهبرگ -->
     <path
         android:fillColor="#E2B93B"
         android:pathData="M54,45 L57.5,53 L66,49.5 L61,57.5 L69,61 L61,64.5 L66,72.5 L57.5,69 L54,77 L50.5,69 L42,72.5 L47,64.5 L39,61 L47,57.5 L42,49.5 L50.5,53 Z" />
-
-    <!-- قرص مرکزی خورشید طلایی و نقطه فیروزه‌ای -->
     <path
         android:fillColor="#C89D28"
         android:pathData="M54,61 m-8.5,0 a8.5,8.5 0 1,0 17,0 a8.5,8.5 0 1,0 -17,0" />
     <path
         android:fillColor="#0B132B"
         android:pathData="M54,61 m-3.2,0 a3.2,3.2 0 1,0 6.4,0 a3.2,3.2 0 1,0 -6.4,0" />
-
-    <!-- گوشه تاخورده پایینِ گاهبرگ به رنگ طلایی هخامنشی -->
     <path
         android:fillColor="#D4AF37"
         android:pathData="M70,69 h13 l-13,13 z" />

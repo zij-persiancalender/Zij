@@ -9,7 +9,6 @@
     android:orientation="horizontal"
     android:padding="16dp">
 
-    <!-- ستون راست: ساعت زنده و نام روز -->
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -37,13 +36,11 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- خط جداکننده ظریف -->
     <FrameLayout
         android:layout_width="1dp"
         android:layout_height="56dp"
         android:background="#33FFFFFF" />
 
-    <!-- ستون چپ: تاریخ کامل ۲۵۸۵ شاهنشاهی، میلادی و مناسبت روز -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -67,7 +64,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="21 Mar 2026"
+            android:text="۲۱ مارس ۲۰۲۶"
             android:textColor="#A0AEC0"
             android:textSize="11sp" />
 
@@ -88,5 +85,4 @@
             android:textSize="12sp"
             android:textStyle="bold" />
     </LinearLayout>
-
 </LinearLayout>
